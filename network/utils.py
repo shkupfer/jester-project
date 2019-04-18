@@ -5,8 +5,10 @@ import os
 import csv
 import random
 import math
+import logging
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+logger = logging.getLogger()
 
 
 def accuracy_from_loader(model, dataloader, scale=1, return_data=False):
@@ -76,41 +78,40 @@ class WidthPadder(Module):
 class JesterDatasetFolder(DatasetFolder):
     def __init__(self, imgseqs_root, targets_csv_path, limit_to_n_imgs=37, delimiter=';', transform=None,
                  target_transform=None, loader=imgseq_loader, extensions=IMG_EXTENSIONS):
+        logger.info("Initializing JesterDatasetFolder instance")
+        logger.info("Reading %s" % targets_csv_path)
         with open(targets_csv_path, 'r') as targets_csv_file:
             targets_reader = csv.reader(targets_csv_file, delimiter=delimiter)
             targets_by_dir = {dirname: clas for (dirname, clas) in targets_reader}
 
+        logger.info("Using set() to get classes")
         classes = sorted(set(targets_by_dir.values()))
         class_to_idx = {classes[i]: i for i in range(len(classes))}
 
-        samples = []
-        imgseqs_root = os.path.expanduser(imgseqs_root)
-
-        for imgseq_dir in sorted(os.listdir(imgseqs_root)):
-            target = targets_by_dir.get(imgseq_dir, None)
-
-            d = os.path.join(imgseqs_root, imgseq_dir)
-            if not os.path.isdir(d):
-                print("Directory %s does not exist" % d)
-                continue
-
-            if target is None:
-                print("Image sequence %s is not in targets file %s" % (imgseq_dir, targets_csv_path))
-                continue
-            imgseq = []
-            for root, _, fnames in sorted(os.walk(d)):
-                for fname in sorted(fnames):
-                    if has_file_allowed_extension(fname, extensions):
-                        path = os.path.join(root, fname)
-                        imgseq.append(path)
-
-            samples.append((imgseq, class_to_idx[target]))
-
-        if len(samples) == 0:
-            raise(RuntimeError("Found 0 files in subfolders of: " + imgseqs_root + "\n"
-                               "Supported extensions are: " + ",".join(extensions)))
-        elif len(targets_by_dir) != len(samples):
-            raise Exception("Number of targets (%s) does not match number of image sequences (%s)" % (len(targets_by_dir), len(samples)))
+        self.imgseqs_root = imgseqs_root
+        #
+        # samples = []
+        # imgseqs_root = os.path.expanduser(imgseqs_root)
+        #
+        # logger.info("Iterating through image sequence files in %s" % imgseqs_root)
+        # for ind, imgseq_dir in enumerate(targets_by_dir):
+        #     if ind % 1000 == 0:
+        #         logger.info("Loading image filenames for sample %s" % (ind + 1))
+        #     target = targets_by_dir.get(imgseq_dir, None)
+        #
+        #     d = os.path.join(imgseqs_root, imgseq_dir)
+        #     if not os.path.isdir(d):
+        #         print("Directory %s does not exist" % d)
+        #         continue
+        #
+        #     imgseq = []
+        #     for root, _, fnames in sorted(os.walk(d)):
+        #         for fname in sorted(fnames):
+        #             if has_file_allowed_extension(fname, extensions):
+        #                 path = os.path.join(root, fname)
+        #                 imgseq.append(path)
+        #
+        #     samples.append((imgseq, class_to_idx[target]))
 
         self.root = imgseqs_root
         self.loader = loader
@@ -119,12 +120,12 @@ class JesterDatasetFolder(DatasetFolder):
 
         self.classes = classes
         self.class_to_idx = class_to_idx
-        self.samples = samples
+        self.targets_by_dir = targets_by_dir.items()
 
         self.transform = transform
         self.target_transform = target_transform
 
-        self.imgs = self.samples
+        logger.info("Done initializing JesterDatasetFolder")
 
     def __getitem__(self, index):
         """
@@ -134,11 +135,14 @@ class JesterDatasetFolder(DatasetFolder):
         Returns:
             tuple: (sample, target) where target is class_index of the target class.
         """
-        path, target = self.samples[index]
+        root_path, target = self.targets_by_dir[index]
+        target = self.class_to_idx[target]
+        imgs_paths = [os.path.join(self.imgseqs_root, root_path, imgseq_dir) for imgseq_dir in os.listdir(os.path.join(self.imgseqs_root, root_path))]
+
         if self.transform is not None:
-            sample = [self.transform(x) for x in self.loader(path)]
+            sample = [self.transform(x) for x in self.loader(imgs_paths)]
         else:
-            sample = self.loader(path)
+            sample = self.loader(imgs_paths)
 
         # If there are more than limit_to_n_imgs images, keep only that many of them (while retaining their order)
         if len(sample) > self.limit_to_n_imgs:
@@ -160,7 +164,7 @@ class JesterDatasetFolder(DatasetFolder):
         return sample, target
 
     def __len__(self):
-        return super(JesterDatasetFolder, self).__len__()
+        return len(self.targets_by_dir)
 
     def __repr__(self):
         return super(JesterDatasetFolder, self).__repr__()
