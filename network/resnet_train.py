@@ -3,6 +3,7 @@ import logging
 import sys
 import os
 import math
+import time
 from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
@@ -44,6 +45,7 @@ def train_resnet(data_dir, delimiter, limit_to_n_imgs, width_extend, batch_size,
 
     train_acc_by_epoch, test_acc_by_epoch = [], []
 
+    start_time = time.time()
     for epoch in range(num_epochs):
         for i, (imgseqs, labels) in enumerate(train_loader):
             logger.info('Epoch %d/%d, Batch %d/%d' % (epoch + 1, num_epochs, i + 1, int(math.ceil(float(len(train_dataset)) / batch_size))))
@@ -68,12 +70,11 @@ def train_resnet(data_dir, delimiter, limit_to_n_imgs, width_extend, batch_size,
         test_acc, test_predicted, test_labels = accuracy_from_loader(rnet, test_loader, scale=100, return_data=True)
         logger.info("Accuracy on test set after %d epochs: %.2f%%" % (epoch + 1, test_acc))
         test_acc_by_epoch.append(test_acc)
-
+    end_time = time.time()
+    logger.info("Training time: %s" % (end_time))
 
     logger.info("Saving model to %s" % mdl_file)
     torch.save(rnet.state_dict(), mdl_file)
-
-
 
     plt.figure(1)
     plt.plot(range(1, num_epochs + 1), train_acc_by_epoch, label='Training Set')
