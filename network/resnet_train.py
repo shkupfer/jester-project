@@ -71,7 +71,7 @@ def train_resnet(data_dir, delimiter, limit_to_n_imgs, width_extend, batch_size,
         logger.info("Accuracy on test set after %d epochs: %.2f%%" % (epoch + 1, test_acc))
         test_acc_by_epoch.append(test_acc)
     end_time = time.time()
-    logger.info("Training time: %s" % (end_time))
+    logger.info("Training time: %s" % (end_time - start_time))
 
     logger.info("Saving model to %s" % mdl_file)
     torch.save(rnet.state_dict(), mdl_file)
