@@ -75,7 +75,6 @@ def train_resnet(data_dir, delimiter, limit_to_n_imgs, width_extend, batch_size,
 
 
 
-    import ipdb;ipdb.set_trace()
     plt.figure(1)
     plt.plot(range(1, num_epochs + 1), train_acc_by_epoch, label='Training Set')
     plt.plot(range(1, num_epochs + 1), test_acc_by_epoch, label='Testing Set')
