@@ -6,9 +6,29 @@ import csv
 import random
 import math
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def get_device():
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def accuracy_from_loader(model, dataloader, scale=1, return_data=False):
+    all_predictions, all_labels = [], []
+    for _, (imgseqs, labels) in enumerate(dataloader):
+        imgseqs = imgseqs.to(device)
+        labels = labels.to(device)
+
+        outputs = model(imgseqs)
+
+        _, predicted_classes = torch.max(outputs, 1)
+
+        all_predictions.append(predicted_classes)
+        all_labels.append(labels)
+
+    all_predictions, all_labels = torch.cat(all_predictions), torch.cat(all_labels)
+    correct = (all_predictions == all_labels).sum().item()
+    acc = scale * float(correct) / all_predictions.shape[0]
+
+    if return_data:
+        return acc, all_predictions, all_labels
+    return acc
 
 
 def imgseq_loader(img_paths):
@@ -54,33 +74,6 @@ class WidthPadder(Module):
 
 
 class JesterDatasetFolder(DatasetFolder):
-    # TODO: Update or get rid of this docstring
-    """A generic data loader where the samples are arranged in this way: ::
-
-        root/class_x/xxx.ext
-        root/class_x/xxy.ext
-        root/class_x/xxz.ext
-
-        root/class_y/123.ext
-        root/class_y/nsdf3.ext
-        root/class_y/asd932_.ext
-
-    Args:
-        root (string): Root directory path.
-        loader (callable): A function to load a sample given its path.
-        extensions (list[string]): A list of allowed extensions.
-        transform (callable, optional): A function/transform that takes in
-            a sample and returns a transformed version.
-            E.g, ``transforms.RandomCrop`` for images.
-        target_transform (callable, optional): A function/transform that takes
-            in the target and transforms it.
-
-     Attributes:
-        classes (list): List of the class names.
-        class_to_idx (dict): Dict with items (class_name, class_index).
-        samples (list): List of (sample path, class_index) tuples
-    """
-
     def __init__(self, imgseqs_root, targets_csv_path, limit_to_n_imgs=37, delimiter=';', transform=None,
                  target_transform=None, loader=imgseq_loader, extensions=IMG_EXTENSIONS):
         with open(targets_csv_path, 'r') as targets_csv_file:

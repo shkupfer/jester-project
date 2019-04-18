@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 def conv3x3x3(in_planes, out_planes, stride=1):
     # 3x3x3 convolution with padding of 1
     # With stride=1, this layer outputs the same dimensions as the input
