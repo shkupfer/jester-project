@@ -12,7 +12,7 @@ logger = logging.getLogger()
 
 
 def accuracy_from_loader(model, dataloader, scale=1, return_data=False):
-    all_predictions, all_labels = [], []
+    all_predictions, all_labels = torch.tensor([]).to(device), torch.tensor([]).to(device)
     for _, (imgseqs, labels) in enumerate(dataloader):
         imgseqs = imgseqs.to(device)
         labels = labels.to(device)
@@ -21,12 +21,13 @@ def accuracy_from_loader(model, dataloader, scale=1, return_data=False):
 
         _, predicted_classes = torch.max(outputs, 1)
 
-        all_predictions.append(predicted_classes)
-        all_labels.append(labels)
+        all_predictions = torch.cat([all_predictions, predicted_classes])
+        all_labels = torch.cat([all_labels, labels])
 
-    all_predictions, all_labels = torch.cat(all_predictions), torch.cat(all_labels)
-    correct = (all_predictions == all_labels).sum().item()
-    acc = scale * float(correct) / all_predictions.shape[0]
+    # correct = (all_predictions == all_labels).sum().item()
+    correct = all_predictions.eq(all_labels).float().sum().item()
+    # acc = scale * float(correct) / all_predictions.shape[0]
+    acc = scale * correct / all_predictions.shape[0]
 
     if return_data:
         return acc, all_predictions, all_labels
