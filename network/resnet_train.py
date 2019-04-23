@@ -88,8 +88,8 @@ def train_resnet(data_dir, delimiter, limit_to_n_imgs, width_extend, batch_size,
     logger.info("Training time: %s" % (end_time - start_time))
 
     plt.figure(1)
-    plt.plot(range(1, epoch + 1), train_acc_by_epoch, label='Training Set')
-    plt.plot(range(1, epoch + 1), test_acc_by_epoch, label='Testing Set')
+    plt.plot(range(1, epoch + 2), train_acc_by_epoch, label='Training Set')
+    plt.plot(range(1, epoch + 2), test_acc_by_epoch, label='Testing Set')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy (%)')
     plt.xticks(range(0, num_epochs + 1, 2))
