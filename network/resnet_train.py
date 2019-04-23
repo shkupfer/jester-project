@@ -18,7 +18,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s -
 logger = logging.getLogger()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-num_loader_workers = 4
+num_loader_workers = 8
 
 
 def train_resnet(data_dir, delimiter, limit_to_n_imgs, width_extend, batch_size, num_epochs, learning_rate, mdl_file, plot_file, confusion_matrix_file):
@@ -45,6 +45,7 @@ def train_resnet(data_dir, delimiter, limit_to_n_imgs, width_extend, batch_size,
     train_acc_by_epoch, test_acc_by_epoch = [], []
 
     start_time = time.time()
+    test_acc = -1
     for epoch in range(num_epochs):
         for i, (imgseqs, labels) in enumerate(train_loader):
             logger.info('Epoch %d/%d, Batch %d/%d' % (epoch + 1, num_epochs, i + 1, int(math.ceil(float(len(train_dataset)) / batch_size))))
