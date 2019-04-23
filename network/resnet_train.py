@@ -65,9 +65,6 @@ def train_resnet(data_dir, delimiter, limit_to_n_imgs, width_extend, batch_size,
 
         rnet.eval()
 
-        logger.info("Saving model to %s" % mdl_file)
-        torch.save(rnet.state_dict(), mdl_file)
-
         train_acc = accuracy_from_loader(rnet, train_loader, scale=100, return_data=False)
         logger.info("Accuracy on training set after %d epochs: %.2f%%" % (epoch + 1, train_acc))
         train_acc_by_epoch.append(train_acc)
@@ -82,6 +79,9 @@ def train_resnet(data_dir, delimiter, limit_to_n_imgs, width_extend, batch_size,
             logger.info("Test accuracy for epoch %d (%.2f%%) was less than previous epoch (%.2f%%), so stopping here and keeping the model from previous epoch" %
                         (epoch + 1, test_acc, last_test_acc))
             break
+
+        logger.info("Saving model to %s" % mdl_file)
+        torch.save(rnet.state_dict(), mdl_file)
 
         rnet.train()
     end_time = time.time()
