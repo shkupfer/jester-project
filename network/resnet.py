@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 
@@ -14,8 +13,36 @@ def conv3x3x3(in_planes, out_planes, stride=1):
         bias=False)
 
 
-class BasicBlock(nn.Module):
+class NewBlock(nn.Module):
+    def __init__(self, inplanes, planes, stride=1, downsample=None):
+        super(NewBlock, self).__init__()
+        self.bn1 = nn.BatchNorm3d(inplanes)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv1 = conv3x3x3(inplanes, planes, stride)
+        self.bn2 = nn.BatchNorm3d(planes)
+        self.conv2 = conv3x3x3(planes, planes)
+        self.downsample = downsample
+        self.stride = stride
 
+    def forward(self, x):
+        residual = x
+        out = self.bn1(x)
+        out = self.relu(out)
+        out = self.conv1(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+        out = self.conv2(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
+
+
+class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3x3(inplanes, planes, stride)
@@ -28,6 +55,7 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         residual = x
+
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
@@ -40,44 +68,38 @@ class BasicBlock(nn.Module):
 
         out += residual
         out = self.relu(out)
-
         return out
 
+
+n_kerns_multiplier = 32
 
 class ResNet(nn.Module):
 
     def __init__(self,
                  block,
                  num_classes=27):
-        self.inplanes = 32
+        self.inplanes = n_kerns_multiplier
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv3d(
             3,
-            32,
+            n_kerns_multiplier,
             kernel_size=7,
             stride=(1, 2, 2),
             padding=(3, 3, 3),
             bias=False)
-        self.bn1 = nn.BatchNorm3d(32)
+        self.bn1 = nn.BatchNorm3d(n_kerns_multiplier)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool3d(kernel_size=(3, 3, 3), stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 32)
+        self.layer1 = self._make_layer(block, n_kerns_multiplier)
         self.layer2 = self._make_layer(
-            block, 64, stride=2)
+            block, 2 * n_kerns_multiplier, stride=2)
         self.layer3 = self._make_layer(
-            block, 128, stride=2)
+            block, 4 * n_kerns_multiplier, stride=2)
         self.layer4 = self._make_layer(
-            block, 256, stride=2)
+            block, 8 * n_kerns_multiplier, stride=2)
         self.avgpool = nn.AvgPool3d(
             (2, 3, 5), stride=1)
-        self.fc = nn.Linear(256 * 2 * 2 * 2, num_classes)
-
-        # for m in self.modules():
-        #     if isinstance(m, nn.Conv3d):
-        #         m.weight = nn.init.kaiming_normal(m.weight, mode='fan_out')
-        #     elif isinstance(m, nn.BatchNorm3d):
-        #         m.weight.data.fill_(1)
-        #         m.bias.data.zero_()
+        self.fc = nn.Linear(8 * n_kerns_multiplier * 8, num_classes)
 
     def _make_layer(self, block, planes, stride=1):
         downsample = None
